@@ -1,0 +1,14 @@
+[
+    {
+        "caption": "XMake: Build",
+        "command": "xmake_build",
+    },
+    {
+        "caption": "XMake: Rebuild",
+        "command": "xmake_rebuild",
+    },
+    {
+        "caption": "XMake: Run",
+        "command": "xmake_run",
+    }
+]

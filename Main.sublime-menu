@@ -1,0 +1,19 @@
+[
+    {
+        "id": "tools",
+        "children":
+        [   
+		    { "caption": "-" },
+            {
+                "caption": "XMake",
+                "children":
+                [
+		            { "command": "xmake_build", "caption": "Build"},
+                    { "command": "xmake_rebuild", "caption": "Rebuild"},
+                    { "command": "xmake_run", "caption": "Run"}
+                ]
+            },
+		    { "caption": "-" }
+        ]
+    }
+]
