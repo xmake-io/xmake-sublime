@@ -26,12 +26,12 @@
     </a>
   </div>
 
-  <p>A XMake integration in Sublime Text 3</p>
+  <p>A XMake integration in Sublime Text</p>
 </div>
 
 ## Introduction 
 
-A XMake integration in Sublime Text 3. 
+A XMake integration in Sublime Text. 
 
 You need install [xmake](https://github.com/tboox/xmake) first and a project with `xmake.lua`.
 
