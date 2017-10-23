@@ -2,6 +2,7 @@ import sublime
 import sublime_plugin
 import subprocess
 import os
+import re
 import time
 
 # print message to console
@@ -22,14 +23,14 @@ def console_show(window = sublime.active_window()):
 	window.run_command("show_panel", {"panel": "console", "toggle": False})
 
 # get the project directory
-def get_projectdir(self):
+def get_projectdir(view):
 
 	# get the project data	
-	project_data = self.view.window().project_data()
+	project_data = view.window().project_data()
 	if project_data == None:
 		console_print("", "", "Unable to initialize settings, you must have a .sublime-project file.")
 		console_print("", "", "Please use 'Project -> Save Project As...' first.")
-		console_show(self.view.window())
+		console_show(view.window())
 		return None
 
 	# get the first folder path with xmake.lua
@@ -38,7 +39,7 @@ def get_projectdir(self):
 		# get folder directory
 		folderdir = folder.get("path")
 		if folderdir == ".":
-			folderdir = os.path.basename(os.path.dirname(self.view.window().project_file_name()))
+			folderdir = os.path.basename(os.path.dirname(view.window().project_file_name()))
 		if os.path.isfile(os.path.join(folderdir, "xmake.lua")):
 			return folderdir
 
@@ -55,7 +56,7 @@ def get_projectdir(self):
 
 	# show error tips
 	console_print("", "", "Unable to find xmake.lua in the project folder, you must have a xmake.lua file.")
-	console_show(self.view.window())
+	console_show(view.window())
 
 	# xmake.lua not found!
 	return None
@@ -101,13 +102,13 @@ class XmakeCleanConfigureCommand(sublime_plugin.TextCommand):
 	def run(self, edit):
 
 		# run async
-		sublime.set_timeout_async(self.run_async, 0)
+		sublime.set_timeout_async(self.__run_async, 0)
 
 	# async run command
-	def run_async(self):
+	def __run_async(self):
 
 		# get the project directory
-		projectdir = get_projectdir(self)
+		projectdir = get_projectdir(self.view)
 		if projectdir == None:
 			return
 
@@ -124,13 +125,13 @@ class XmakeConfigureCommand(sublime_plugin.TextCommand):
 	def run(self, edit):
 
 		# run async
-		sublime.set_timeout_async(self.run_async, 0)
+		sublime.set_timeout_async(self.__run_async, 0)
 
 	# async run command
-	def run_async(self):
+	def __run_async(self):
 
 		# get the project directory
-		projectdir = get_projectdir(self)
+		projectdir = get_projectdir(self.view)
 		if projectdir == None:
 			return
 
@@ -147,13 +148,13 @@ class XmakeBuildCommand(sublime_plugin.TextCommand):
 	def run(self, edit):
 
 		# run async
-		sublime.set_timeout_async(self.run_async, 0)
+		sublime.set_timeout_async(self.__run_async, 0)
 
 	# async run command
-	def run_async(self):
+	def __run_async(self):
 
 		# get the project directory
-		projectdir = get_projectdir(self)
+		projectdir = get_projectdir(self.view)
 		if projectdir == None:
 			return
 
@@ -170,13 +171,13 @@ class XmakeRebuildCommand(sublime_plugin.TextCommand):
 	def run(self, edit):
 
 		# run async
-		sublime.set_timeout_async(self.run_async, 0)
+		sublime.set_timeout_async(self.__run_async, 0)
 
 	# async run command
-	def run_async(self):
+	def __run_async(self):
 
 		# get the project directory
-		projectdir = get_projectdir(self)
+		projectdir = get_projectdir(self.view)
 		if projectdir == None:
 			return
 
@@ -193,13 +194,13 @@ class XmakeRunCommand(sublime_plugin.TextCommand):
 	def run(self, edit):
 
 		# run async
-		sublime.set_timeout_async(self.run_async, 0)
+		sublime.set_timeout_async(self.__run_async, 0)
 
 	# async run command
-	def run_async(self):
+	def __run_async(self):
 
 		# get the project directory
-		projectdir = get_projectdir(self)
+		projectdir = get_projectdir(self.view)
 		if projectdir == None:
 			return
 
@@ -216,13 +217,13 @@ class XmakeCleanCommand(sublime_plugin.TextCommand):
 	def run(self, edit):
 
 		# run async
-		sublime.set_timeout_async(self.run_async, 0)
+		sublime.set_timeout_async(self.__run_async, 0)
 
 	# async run command
-	def run_async(self):
+	def __run_async(self):
 
 		# get the project directory
-		projectdir = get_projectdir(self)
+		projectdir = get_projectdir(self.view)
 		if projectdir == None:
 			return
 
@@ -231,3 +232,59 @@ class XmakeCleanCommand(sublime_plugin.TextCommand):
         
 		# clean files
 		run_command(self, "xmake clean", "Clean")
+
+# the event listener
+class XmakeListener(sublime_plugin.EventListener):
+
+	# post text command
+	def on_post_text_command(self, view, command_name, args):
+
+		# double click?
+		if command_name == 'drag_select' and 'by' in args.keys() and args['by'] == 'words':
+			self.__on_double_click_command(view, args)
+
+	# on double click command
+	def __on_double_click_command(self, view, args):
+		
+		# get the selected position
+		sel = view.sel()[0]
+		if sel.end() - sel.begin() <= 0:
+			return
+
+		# get the selected line
+		selected_line = view.substr(view.line(sel)).split('\n')[0].rstrip()
+
+		# get file, line and message
+		file = None
+		line = None
+		kind = None
+		message = None
+		matches = re.findall(r'^(error: )?(.*?):([0-9]*):([0-9]*): (.*?): (.*)$', selected_line)
+		if matches and len(matches[0]) == 6:
+			file = matches[0][1]
+			line = matches[0][2]
+			kind = matches[0][4]
+			message = matches[0][5]
+
+		# goto the error and warning position
+		if file and line and message and os.path.isfile(file):
+
+			# get the project directory
+			projectdir = get_projectdir(view)
+			if projectdir == None:
+				return
+
+			# get absolute file path
+			if not os.path.isabs(file):
+				file = os.path.abspath(os.path.join(projectdir, file))
+
+			# goto the file view
+			window = sublime.active_window()
+			fileview = window.open_file("%s:%s:0"%(file, line), sublime.ENCODED_POSITION)
+			if fileview:
+				line = int(line)
+				region = fileview.full_line(fileview.text_point(line - 1 if line > 0 else 0, 0))
+				fileview.add_regions("highlighted_lines", [region], 'error', 'dot', sublime.DRAW_OUTLINED)
+				fileview.show(region)
+				window.focus_view(fileview)
+
