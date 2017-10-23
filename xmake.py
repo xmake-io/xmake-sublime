@@ -2,6 +2,7 @@ import sublime
 import sublime_plugin
 import subprocess
 import os
+import time
 
 # print message to console
 def console_print(host, prefix, output):
@@ -60,7 +61,7 @@ def get_projectdir(self):
 	return None
 
 # run command
-def run_command(self, command):
+def run_command(self, command, taskname = None):
 
     # create output panel
 	panel = self.view.window().create_output_panel('xmake')
@@ -71,6 +72,9 @@ def run_command(self, command):
 	# start to output
 	panel.set_read_only(False)
 
+	# start time
+	startime = time.clock()
+
     # run it
 	process = subprocess.Popen(command, stdout = subprocess.PIPE, shell = True, bufsize = 0)
 	if process:
@@ -80,8 +84,61 @@ def run_command(self, command):
 			process.stdout.flush()
 		process.communicate()
 
+	# end time
+	endime = time.clock()
+
+	# show result
+	result = "%sFinished, %0.2f seconds!" %(taskname + " " if taskname else "", endime - startime)
+	panel.run_command('append', {'characters': result, "force": True, "scroll_to_end": True})
+
 	# stop to output
 	panel.set_read_only(True)
+
+# clean configure 
+class XmakeCleanConfigureCommand(sublime_plugin.TextCommand):
+
+	# run command
+	def run(self, edit):
+
+		# run async
+		sublime.set_timeout_async(self.run_async, 0)
+
+	# async run command
+	def run_async(self):
+
+		# get the project directory
+		projectdir = get_projectdir(self)
+		if projectdir == None:
+			return
+
+		# enter the project directory
+		os.chdir(projectdir)
+        
+		# configure project
+		run_command(self, "xmake config -c", "Clean Configure")
+
+# configure project
+class XmakeConfigureCommand(sublime_plugin.TextCommand):
+
+	# run command
+	def run(self, edit):
+
+		# run async
+		sublime.set_timeout_async(self.run_async, 0)
+
+	# async run command
+	def run_async(self):
+
+		# get the project directory
+		projectdir = get_projectdir(self)
+		if projectdir == None:
+			return
+
+		# enter the project directory
+		os.chdir(projectdir)
+        
+		# configure project
+		run_command(self, "xmake config", "Configure")
 
 # build target
 class XmakeBuildCommand(sublime_plugin.TextCommand):
@@ -104,7 +161,7 @@ class XmakeBuildCommand(sublime_plugin.TextCommand):
 		os.chdir(projectdir)
 
 		# build target
-		run_command(self, "xmake")
+		run_command(self, "xmake", "Build")
 
 # rebuild target
 class XmakeRebuildCommand(sublime_plugin.TextCommand):
@@ -127,7 +184,7 @@ class XmakeRebuildCommand(sublime_plugin.TextCommand):
 		os.chdir(projectdir)
 
 		# rebuild target
-		run_command(self, "xmake -r")
+		run_command(self, "xmake -r", "Rebuild")
         
 # run target
 class XmakeRunCommand(sublime_plugin.TextCommand):
@@ -150,4 +207,27 @@ class XmakeRunCommand(sublime_plugin.TextCommand):
 		os.chdir(projectdir)
         
 		# run target
-		run_command(self, "xmake run")
+		run_command(self, "xmake run", "Run")
+
+# clean files
+class XmakeCleanCommand(sublime_plugin.TextCommand):
+
+	# run command
+	def run(self, edit):
+
+		# run async
+		sublime.set_timeout_async(self.run_async, 0)
+
+	# async run command
+	def run_async(self):
+
+		# get the project directory
+		projectdir = get_projectdir(self)
+		if projectdir == None:
+			return
+
+		# enter the project directory
+		os.chdir(projectdir)
+        
+		# clean files
+		run_command(self, "xmake clean", "Clean")

@@ -10,7 +10,10 @@
                 [
 		            { "command": "xmake_build", "caption": "Build"},
                     { "command": "xmake_rebuild", "caption": "Rebuild"},
-                    { "command": "xmake_run", "caption": "Run"}
+                    { "command": "xmake_run", "caption": "Run"},
+                    { "command": "xmake_clean", "caption": "Clean"},
+                    { "command": "xmake_configure", "caption": "Configure"},
+                    { "command": "xmake_clean_configure", "caption": "Clean Configure"}
                 ]
             },
 		    { "caption": "-" }
