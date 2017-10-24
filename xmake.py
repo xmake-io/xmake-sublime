@@ -11,6 +11,9 @@ class XmakePlugin(object):
 	# initializer
 	def __init__(self):
 
+		# init xmake
+		self.xmake = None
+
 		# init panels
 		self.panels = {}
 
@@ -30,6 +33,26 @@ class XmakePlugin(object):
 		
 		# update status
 		self.update_status()
+
+	# get xmake program
+	def get_xmake(self):
+
+		# for windows? return xmake directly
+		if sublime.platform() == "windows":
+			self.xmake = "xmake"
+
+		# attempt to get xmake program
+		if not self.xmake:
+			programs = ["xmake", os.path.join(os.getenv("HOME"), ".local/bin/xmake"), "/usr/local/bin/xmake", "/usr/bin/xmake"]
+			for program in programs:
+				if program == "xmake" or os.path.isfile(program):
+					result = subprocess.Popen(program + " --version", stdout = subprocess.PIPE, shell = True).communicate()
+					if result and len(result[0]) > 0:
+						self.xmake = program
+						break
+		
+		# ok?
+		return self.xmake
 
 	# print message to console
 	def console_print(self, host, prefix, output):
@@ -190,7 +213,7 @@ class XmakePlugin(object):
 
 		# get cache config
 		cache = None
-		config = subprocess.Popen("""xmake l -c 'import("core.project.config"); config.load(); print("$(plat) $(arch) $(mode)")'""", stdout = subprocess.PIPE, cwd = projectdir, shell = True).communicate()
+		config = subprocess.Popen(self.get_xmake() + """ l -c 'import("core.project.config"); config.load(); print("$(plat) $(arch) $(mode)")'""", stdout = subprocess.PIPE, cwd = projectdir, shell = True).communicate()
 		if config and len(config) != 0:
 			cache = config[0].strip().decode('utf-8').split(' ')
 
@@ -293,7 +316,7 @@ class XmakePlugin(object):
 		if self.options_changed:
 
 			# make command
-			command = "xmake f -p %s -a %s -m %s" %(self.get_option("plat"), self.get_option("arch"), self.get_option("mode"))
+			command = self.get_xmake() + " f -p %s -a %s -m %s" %(self.get_option("plat"), self.get_option("arch"), self.get_option("mode"))
 			
 			# configure project
 			plugin.run_command(command, "Configure")
@@ -336,7 +359,7 @@ class XmakeCleanConfigureCommand(sublime_plugin.TextCommand):
 		plugin.clean_output_panel("xmake")
         
 		# configure project
-		plugin.run_command("xmake f -c", "Clean Configure")
+		plugin.run_command(plugin.get_xmake() + " f -c", "Clean Configure")
 
 		# reload options
 		plugin.load_options()
@@ -396,7 +419,7 @@ class XmakeBuildCommand(sublime_plugin.TextCommand):
 		# add build level to command     
 		targetname = plugin.get_target()     
 		buildlevel = plugin.get_build_output_level()
-		command = "xmake"  
+		command = plugin.get_xmake()
 		if targetname and targetname != "default":
 			command += " build";
 		if buildlevel == "verbose":
@@ -441,7 +464,7 @@ class XmakeRebuildCommand(sublime_plugin.TextCommand):
 		# add build level to command     
 		targetname = plugin.get_target()     
 		buildlevel = plugin.get_build_output_level()
-		command = "xmake -r"  
+		command = plugin.get_xmake() + " -r"  
 		if buildlevel == "verbose":
 			command += " -v";
 		elif buildlevel == "warning":
@@ -482,7 +505,7 @@ class XmakeRunCommand(sublime_plugin.TextCommand):
 		plugin.update_config()
 
 		# make command
-		command = "xmake r"   
+		command = plugin.get_xmake() + " r"   
 		targetname = plugin.get_target() 
 		if targetname and targetname != "default":
 			command += " " + targetname;
@@ -516,7 +539,7 @@ class XmakeCleanCommand(sublime_plugin.TextCommand):
 		plugin.update_config()
 
 		# make command
-		command = "xmake c"
+		command = plugin.get_xmake() + " c"
 		targetname = plugin.get_target()   
 		if targetname and targetname != "default":
 			command += " " + targetname;
@@ -548,7 +571,7 @@ class XmakePackageCommand(sublime_plugin.TextCommand):
 		plugin.update_config()
 
 		# make command
-		command = "xmake p"
+		command = plugin.get_xmake() + " p"
 		targetname = plugin.get_target()   
 		if targetname and targetname != "default":
 			command += " " + targetname;
@@ -659,7 +682,7 @@ class XmakeSetDefaultTargetCommand(sublime_plugin.TextCommand):
 
 		# get targets
 		self.targets = ["all", "default"]
-		targets = subprocess.Popen("""xmake l -c 'import("core.project.config"); import("core.project.project"); config.load(); for name, _ in pairs((project.targets())) do print(name) end'""", stdout = subprocess.PIPE, cwd = projectdir, shell = True).communicate()
+		targets = subprocess.Popen(plugin.get_xmake() + """ l -c 'import("core.project.config"); import("core.project.project"); config.load(); for name, _ in pairs((project.targets())) do print(name) end'""", stdout = subprocess.PIPE, cwd = projectdir, shell = True).communicate()
 		if targets:
 			for target in targets[0].strip().decode('utf-8').split('\n'):
 				self.targets.append(target)
