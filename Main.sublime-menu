@@ -12,8 +12,14 @@
                     { "command": "xmake_rebuild", "caption": "Rebuild"},
                     { "command": "xmake_run", "caption": "Run"},
                     { "command": "xmake_clean", "caption": "Clean"},
+                    { "command": "xmake_package", "caption": "Package"},
                     { "command": "xmake_configure", "caption": "Configure"},
-                    { "command": "xmake_clean_configure", "caption": "Clean Configure"}
+                    { "command": "xmake_clean_configure", "caption": "Clean Configure"},
+                    { "command": "xmake_set_build_mode", "caption": "Set Build Mode"},
+                    { "command": "xmake_set_target_plat", "caption": "Set Target Platform"},
+                    { "command": "xmake_set_target_arch", "caption": "Set Target Architecture"},
+                    { "command": "xmake_set_default_target", "caption": "Set Default Target"},
+                    { "command": "xmake_set_build_output_level", "caption": "Set Build Output Level"}
                 ]
             },
 		    { "caption": "-" }

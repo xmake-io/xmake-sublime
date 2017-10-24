@@ -1,26 +1,50 @@
 [
     {
         "caption": "XMake: Build",
-        "command": "xmake_build",
+        "command": "xmake_build"
     },
     {
         "caption": "XMake: Rebuild",
-        "command": "xmake_rebuild",
+        "command": "xmake_rebuild"
     },
     {
         "caption": "XMake: Run",
-        "command": "xmake_run",
+        "command": "xmake_run"
     },
     {
         "caption": "XMake: Clean",
-        "command": "xmake_clean",
+        "command": "xmake_clean"
+    },
+    {
+        "caption": "XMake: Package",
+        "command": "xmake_package"
     },
     {
         "caption": "XMake: Configure",
-        "command": "xmake_configure",
+        "command": "xmake_configure"
     },
     {
         "caption": "XMake: Clean Configure",
-        "command": "xmake_clean_configure",
+        "command": "xmake_clean_configure"
+    },
+    {
+        "caption": "XMake: Set Build Mode",
+        "command": "xmake_set_build_mode"
+    },
+    {
+        "caption": "XMake: Set Target Platform",
+        "command": "xmake_set_target_plat"
+    },
+    {
+        "caption": "XMake: Set Target Architecture",
+        "command": "xmake_set_target_arch"
+    },
+    {
+        "caption": "XMake: Set Default Target",
+        "command": "xmake_set_default_target"
+    },
+    {
+        "caption": "XMake: Set Build Output Level",
+        "command": "xmake_set_build_output_level"
     }
 ]
