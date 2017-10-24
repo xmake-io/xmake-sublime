@@ -5,95 +5,139 @@ import os
 import re
 import time
 
-# print message to console
-def console_print(host, prefix, output):
+# the xmake plugin
+class XmakePlugin(object):
 
-	if host and prefix:
-		host = host + "[" + prefix + "]: "
-	elif host and not prefix:
-		host = host + ": "
-	elif not host and prefix:
-		host = os.path.basename(prefix) + ": "
+	# initializer
+	def __init__(self):
+		
+		# update status
+		self.update_status()
 
-	output = "[xmake]: " + host + output.replace("\n", "\n[rsync-ssh] "+ host)
-	print(output)
+	# print message to console
+	def console_print(self, host, prefix, output):
 
-# show the console window
-def console_show(window = sublime.active_window()):
-	window.run_command("show_panel", {"panel": "console", "toggle": False})
+		if host and prefix:
+			host = host + "[" + prefix + "]: "
+		elif host and not prefix:
+			host = host + ": "
+		elif not host and prefix:
+			host = os.path.basename(prefix) + ": "
 
-# get the project directory
-def get_projectdir(view):
+		output = "[xmake]: " + host + output.replace("\n", "\n[rsync-ssh] "+ host)
+		print(output)
 
-	# get the project data	
-	project_data = view.window().project_data()
-	if project_data == None:
-		console_print("", "", "Unable to initialize settings, you must have a .sublime-project file.")
-		console_print("", "", "Please use 'Project -> Save Project As...' first.")
-		console_show(view.window())
+	# show the console window
+	def console_show(self, window = sublime.active_window()):
+		window.run_command("show_panel", {"panel": "console", "toggle": False})
+
+	# get the project directory
+	def projectdir(self, window = sublime.active_window()):
+
+		# get the project data	
+		project_data = window.project_data()
+		if project_data == None:
+			self.console_print("", "", "Unable to initialize settings, you must have a .sublime-project file.")
+			self.console_print("", "", "Please use 'Project -> Save Project As...' first.")
+			self.console_show(window)
+			return None
+
+		# get the first folder path with xmake.lua
+		for folder in project_data.get("folders"):
+
+			# get folder directory
+			folderdir = folder.get("path")
+			if folderdir == ".":
+				folderdir = os.path.basename(os.path.dirname(window.project_file_name()))
+			if os.path.isfile(os.path.join(folderdir, "xmake.lua")):
+				return folderdir
+
+			# find xmake.lua
+			found = False
+			for parent, dirnames, filenames in os.walk(folderdir):
+				if not found:
+					for filename in filenames:
+						if filename == "xmake.lua":
+							found = True
+						break
+			if found:
+				return folderdir
+
+		# show error tips
+		self.console_print("", "", "Unable to find xmake.lua in the project folder, you must have a xmake.lua file.")
+		self.console_show(window)
+
+		# xmake.lua not found!
 		return None
 
-	# get the first folder path with xmake.lua
-	for folder in project_data.get("folders"):
+	# get output panel
+	def output_panel(self, name, new = False, window = sublime.active_window()):
 
-		# get folder directory
-		folderdir = folder.get("path")
-		if folderdir == ".":
-			folderdir = os.path.basename(os.path.dirname(view.window().project_file_name()))
-		if os.path.isfile(os.path.join(folderdir, "xmake.lua")):
-			return folderdir
+		# attempt to get the output panel
+		try:
+			if not new:
+				return window.get_output_panel(name)
+		except AttributeError:
+			new = True
 
-		# find xmake.lua
-		found = False
-		for parent, dirnames, filenames in os.walk(folderdir):
-			if not found:
-				for filename in filenames:
-					if filename == "xmake.lua":
-						found = True
-					break
-		if found:
-			return folderdir
+		# new a output panel
+		panel = None
+		if new:
+			panel = window.create_output_panel(name)
+			panel.set_name("output." + name)
+		return panel
 
-	# show error tips
-	console_print("", "", "Unable to find xmake.lua in the project folder, you must have a xmake.lua file.")
-	console_show(view.window())
+	# run command
+	def run_command(self, command, taskname = None, window = sublime.active_window()):
 
-	# xmake.lua not found!
-	return None
+	    # create output panel
+		panel = self.output_panel('xmake', True)
 
-# run command
-def run_command(self, command, taskname = None):
+		# show output panel
+		window.run_command("show_panel", {"panel": "output.xmake"})
 
-    # create output panel
-	panel = self.view.window().create_output_panel('xmake')
+		# start to output
+		panel.set_read_only(False)
 
-	# show output panel
-	self.view.window().run_command("show_panel", {"panel": "output.xmake"})
+		# start time
+		startime = time.clock()
 
-	# start to output
-	panel.set_read_only(False)
-
-	# start time
-	startime = time.clock()
-
-    # run it
-	process = subprocess.Popen(command, stdout = subprocess.PIPE, shell = True, bufsize = 0)
-	if process:
-		process.stdout.flush()
-		for line in iter(process.stdout.readline, b''):
-			panel.run_command('append', {'characters': line.decode('utf-8'), "force": True, "scroll_to_end": True})
+	    # run it
+		process = subprocess.Popen(command, stdout = subprocess.PIPE, shell = True, bufsize = 0)
+		if process:
 			process.stdout.flush()
-		process.communicate()
+			for line in iter(process.stdout.readline, b''):
+				panel.run_command('append', {'characters': line.decode('utf-8'), "force": True, "scroll_to_end": True})
+				process.stdout.flush()
+			process.communicate()
 
-	# end time
-	endime = time.clock()
+		# end time
+		endime = time.clock()
 
-	# show result
-	result = "%sFinished, %0.2f seconds!" %(taskname + " " if taskname else "", endime - startime)
-	panel.run_command('append', {'characters': result, "force": True, "scroll_to_end": True})
+		# show result
+		result = "%sFinished, %0.2f seconds!" %(taskname + " " if taskname else "", endime - startime)
+		panel.run_command('append', {'characters': result, "force": True, "scroll_to_end": True})
 
-	# stop to output
-	panel.set_read_only(True)
+		# stop to output
+		panel.set_read_only(True)
+
+	# update status 
+	def update_status(self, window = sublime.active_window()):
+
+		# get project directory
+		projectdir = self.projectdir(window)
+
+		# make status message
+		message = "%s" %(projectdir)
+
+		# update status message
+		sublime.status_message(message)
+
+# plugin loaded
+def plugin_loaded():
+		
+	global plugin
+	plugin = XmakePlugin()
 
 # clean configure 
 class XmakeCleanConfigureCommand(sublime_plugin.TextCommand):
@@ -108,7 +152,7 @@ class XmakeCleanConfigureCommand(sublime_plugin.TextCommand):
 	def __run_async(self):
 
 		# get the project directory
-		projectdir = get_projectdir(self.view)
+		projectdir = plugin.projectdir()
 		if projectdir == None:
 			return
 
@@ -116,7 +160,7 @@ class XmakeCleanConfigureCommand(sublime_plugin.TextCommand):
 		os.chdir(projectdir)
         
 		# configure project
-		run_command(self, "xmake config -c", "Clean Configure")
+		plugin.run_command("xmake config -c", "Clean Configure")
 
 # configure project
 class XmakeConfigureCommand(sublime_plugin.TextCommand):
@@ -131,7 +175,7 @@ class XmakeConfigureCommand(sublime_plugin.TextCommand):
 	def __run_async(self):
 
 		# get the project directory
-		projectdir = get_projectdir(self.view)
+		projectdir = plugin.projectdir()
 		if projectdir == None:
 			return
 
@@ -139,7 +183,7 @@ class XmakeConfigureCommand(sublime_plugin.TextCommand):
 		os.chdir(projectdir)
         
 		# configure project
-		run_command(self, "xmake config", "Configure")
+		plugin.run_command("xmake config", "Configure")
 
 # build target
 class XmakeBuildCommand(sublime_plugin.TextCommand):
@@ -154,7 +198,7 @@ class XmakeBuildCommand(sublime_plugin.TextCommand):
 	def __run_async(self):
 
 		# get the project directory
-		projectdir = get_projectdir(self.view)
+		projectdir = plugin.projectdir()
 		if projectdir == None:
 			return
 
@@ -162,7 +206,7 @@ class XmakeBuildCommand(sublime_plugin.TextCommand):
 		os.chdir(projectdir)
 
 		# build target
-		run_command(self, "xmake", "Build")
+		plugin.run_command("xmake", "Build")
 
 # rebuild target
 class XmakeRebuildCommand(sublime_plugin.TextCommand):
@@ -177,7 +221,7 @@ class XmakeRebuildCommand(sublime_plugin.TextCommand):
 	def __run_async(self):
 
 		# get the project directory
-		projectdir = get_projectdir(self.view)
+		projectdir = plugin.projectdir()
 		if projectdir == None:
 			return
 
@@ -185,7 +229,7 @@ class XmakeRebuildCommand(sublime_plugin.TextCommand):
 		os.chdir(projectdir)
 
 		# rebuild target
-		run_command(self, "xmake -r", "Rebuild")
+		plugin.run_command("xmake -r", "Rebuild")
         
 # run target
 class XmakeRunCommand(sublime_plugin.TextCommand):
@@ -200,7 +244,7 @@ class XmakeRunCommand(sublime_plugin.TextCommand):
 	def __run_async(self):
 
 		# get the project directory
-		projectdir = get_projectdir(self.view)
+		projectdir = plugin.projectdir()
 		if projectdir == None:
 			return
 
@@ -208,7 +252,7 @@ class XmakeRunCommand(sublime_plugin.TextCommand):
 		os.chdir(projectdir)
         
 		# run target
-		run_command(self, "xmake run", "Run")
+		plugin.run_command("xmake run", "Run")
 
 # clean files
 class XmakeCleanCommand(sublime_plugin.TextCommand):
@@ -223,7 +267,7 @@ class XmakeCleanCommand(sublime_plugin.TextCommand):
 	def __run_async(self):
 
 		# get the project directory
-		projectdir = get_projectdir(self.view)
+		projectdir = plugin.projectdir()
 		if projectdir == None:
 			return
 
@@ -231,7 +275,7 @@ class XmakeCleanCommand(sublime_plugin.TextCommand):
 		os.chdir(projectdir)
         
 		# clean files
-		run_command(self, "xmake clean", "Clean")
+		plugin.run_command("xmake clean", "Clean")
 
 # the event listener
 class XmakeListener(sublime_plugin.EventListener):
@@ -245,7 +289,11 @@ class XmakeListener(sublime_plugin.EventListener):
 
 	# on double click command
 	def __on_double_click_command(self, view, args):
-		
+
+		# only for the panel: output.xmake
+		if view.name() != "output.xmake":
+			return
+
 		# get the selected position
 		sel = view.sel()[0]
 		if sel.end() - sel.begin() <= 0:
@@ -259,18 +307,26 @@ class XmakeListener(sublime_plugin.EventListener):
 		line = None
 		kind = None
 		message = None
-		matches = re.findall(r'^(error: )?(.*?):([0-9]*):([0-9]*): (.*?): (.*)$', selected_line)
-		if matches and len(matches[0]) == 6:
-			file = matches[0][1]
-			line = matches[0][2]
-			kind = matches[0][4]
-			message = matches[0][5]
+		if sublime.platform() == "windows":
+			matches = re.findall(r'(.*?)\\(([0-9]*)\\): (.*?) .*?: (.*)', selected_line)
+			if matches and len(matches[0]) == 4:
+				file = matches[0][0]
+				line = matches[0][1]
+				kind = matches[0][2]
+				message = matches[0][3]
+		else:
+			matches = re.findall(r'^(error: )?(.*?):([0-9]*):([0-9]*): (.*?): (.*)$', selected_line)
+			if matches and len(matches[0]) == 6:
+				file = matches[0][1]
+				line = matches[0][2]
+				kind = matches[0][4]
+				message = matches[0][5]
 
 		# goto the error and warning position
 		if file and line and message and os.path.isfile(file):
 
 			# get the project directory
-			projectdir = get_projectdir(view)
+			projectdir = plugin.projectdir()
 			if projectdir == None:
 				return
 
@@ -283,7 +339,7 @@ class XmakeListener(sublime_plugin.EventListener):
 			fileview = window.open_file("%s:%s:0"%(file, line), sublime.ENCODED_POSITION)
 			if fileview:
 				line = int(line)
-				region = fileview.full_line(fileview.text_point(line - 1 if line > 0 else 0, 0))
+				region = fileview.line(fileview.text_point(line - 1 if line > 0 else 0, 0))
 				fileview.add_regions("highlighted_lines", [region], 'error', 'dot', sublime.DRAW_OUTLINED)
 				fileview.show(region)
 				window.focus_view(fileview)

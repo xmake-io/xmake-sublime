@@ -1,0 +1,5 @@
+{
+	"shell_cmd": "xmake",
+	"working_dir": "$folder",
+    "file_regex": "(.*?)\\(([0-9]*)\\): .*?: (.*)"
+}
