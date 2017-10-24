@@ -138,6 +138,11 @@ class XmakePlugin(object):
 	# run command
 	def run_command(self, command, taskname = None):
 
+		# get project directory
+		projectdir = plugin.get_projectdir(False)
+		if projectdir == None:
+			return
+
 		# get window
 		window = sublime.active_window()
 
@@ -154,7 +159,7 @@ class XmakePlugin(object):
 		startime = time.clock()
 
 		# run it
-		process = subprocess.Popen(command, stdout = subprocess.PIPE, shell = True, bufsize = 0)
+		process = subprocess.Popen(command, stdout = subprocess.PIPE, shell = True, cwd = projectdir, bufsize = 0)
 		if process:
 			process.stdout.flush()
 			for line in iter(process.stdout.readline, b''):
@@ -183,32 +188,29 @@ class XmakePlugin(object):
 		if projectdir == None:
 			return
 
-		# enter the project directory
-		os.chdir(projectdir)
-
 		# get cache config
 		cache = None
-		config = subprocess.Popen("""xmake l -c 'import("core.project.config"); config.load(); print("$(plat) $(arch) $(mode)")'""", stdout = subprocess.PIPE, shell = True).communicate()
+		config = subprocess.Popen("""xmake l -c 'import("core.project.config"); config.load(); print("$(plat) $(arch) $(mode)")'""", stdout = subprocess.PIPE, cwd = projectdir, shell = True).communicate()
 		if config and len(config) != 0:
 			cache = config[0].strip().decode('utf-8').split(' ')
 
 		# get platform
-		plat = cache[0] if cache != None else None
-		if plat != None:
+		plat = cache[0] if cache != None and len(cache) > 0 else None
+		if plat != None and len(plat) > 0:
 			self.options["plat"] = plat
 		else:
 			self.options["plat"] = {"osx": "macosx", "linux": "linux", "windows": "windows"}[sublime.platform()]
 
 		# get architecture
-		arch = cache[1] if cache != None else None
-		if arch != None:
+		arch = cache[1] if cache != None and len(cache) > 1 else None
+		if arch != None and len(arch) > 0:
 			self.options["arch"] = arch
 		else:
 			self.options["arch"] = sublime.arch() if sublime.platform() == "windows" else {"x86": "i386", "x64": "x86_64"}[sublime.arch()]
  
 		# get architecture
-		mode = cache[2] if cache != None else None
-		if mode != None:
+		mode = cache[2] if cache != None and len(cache) > 2 else None
+		if mode != None and len(mode) > 0:
 			self.options["mode"] = mode
 		else:
 			self.options["mode"] = "release"
@@ -292,7 +294,7 @@ class XmakePlugin(object):
 
 			# make command
 			command = "xmake f -p %s -a %s -m %s" %(self.get_option("plat"), self.get_option("arch"), self.get_option("mode"))
-
+			
 			# configure project
 			plugin.run_command(command, "Configure")
 
@@ -330,9 +332,6 @@ class XmakeCleanConfigureCommand(sublime_plugin.TextCommand):
 		if projectdir == None:
 			return
 
-		# enter the project directory
-		os.chdir(projectdir)
-
 		# clean output panel first
 		plugin.clean_output_panel("xmake")
         
@@ -365,9 +364,6 @@ class XmakeConfigureCommand(sublime_plugin.TextCommand):
 		if projectdir == None:
 			return
 
-		# enter the project directory
-		os.chdir(projectdir)
-        
 		# clean output panel first
 		plugin.clean_output_panel("xmake")
         
@@ -390,9 +386,6 @@ class XmakeBuildCommand(sublime_plugin.TextCommand):
 		projectdir = plugin.get_projectdir()
 		if projectdir == None:
 			return
-
-		# enter the project directory
-		os.chdir(projectdir)
 
 		# clean output panel first
 		plugin.clean_output_panel("xmake")
@@ -439,9 +432,6 @@ class XmakeRebuildCommand(sublime_plugin.TextCommand):
 		if projectdir == None:
 			return
 
-		# enter the project directory
-		os.chdir(projectdir)
-
 		# clean output panel first
 		plugin.clean_output_panel("xmake")
         
@@ -485,9 +475,6 @@ class XmakeRunCommand(sublime_plugin.TextCommand):
 		if projectdir == None:
 			return
 
-		# enter the project directory
-		os.chdir(projectdir)
-        
 		# clean output panel first
 		plugin.clean_output_panel("xmake")
         
@@ -522,9 +509,6 @@ class XmakeCleanCommand(sublime_plugin.TextCommand):
 		if projectdir == None:
 			return
 
-		# enter the project directory
-		os.chdir(projectdir)
-
 		# clean output panel first
 		plugin.clean_output_panel("xmake")
 
@@ -556,9 +540,6 @@ class XmakePackageCommand(sublime_plugin.TextCommand):
 		projectdir = plugin.get_projectdir()
 		if projectdir == None:
 			return
-
-		# enter the project directory
-		os.chdir(projectdir)
 
 		# clean output panel first
 		plugin.clean_output_panel("xmake")
@@ -671,9 +652,14 @@ class XmakeSetDefaultTargetCommand(sublime_plugin.TextCommand):
 	# run command
 	def run(self, edit):
 
+		# get project directory
+		projectdir = plugin.get_projectdir(False)
+		if projectdir == None:
+			return
+
 		# get targets
 		self.targets = ["all", "default"]
-		targets = subprocess.Popen("""xmake l -c 'import("core.project.config"); import("core.project.project"); config.load(); for name, _ in pairs((project.targets())) do print(name) end'""", stdout = subprocess.PIPE, shell = True).communicate()
+		targets = subprocess.Popen("""xmake l -c 'import("core.project.config"); import("core.project.project"); config.load(); for name, _ in pairs((project.targets())) do print(name) end'""", stdout = subprocess.PIPE, cwd = projectdir, shell = True).communicate()
 		if targets:
 			for target in targets[0].strip().decode('utf-8').split('\n'):
 				self.targets.append(target)
