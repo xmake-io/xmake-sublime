@@ -37,4 +37,41 @@ You need install [xmake](https://github.com/tboox/xmake) first and a project wit
 
 Please see [xmake-github](https://github.com/tboox/xmake) and [website](http://xmake.io) if you want to known more about xmake.
 
+## Features
+
+* Quickstart
+* Colorization
+* Completion Lists
+* StatusBar
+* Commands
+* Configuration
+* Build and Run
+* Problem
+
+## Quickstart
+
+<img src="https://raw.githubusercontent.com/tboox/xmake-sublime/master/res/quickstart.gif" width="60%" />
+
+## Colorization and Completion Lists
+
+<img src="https://raw.githubusercontent.com/tboox/xmake-sublime/master/res/completion.gif" width="60%" />
+
+## StatusBar
+
+![statusbar](https://raw.githubusercontent.com/tboox/xmake-sublime/master/res/statusbar.png)
  
+## Commands
+
+<img src="https://raw.githubusercontent.com/tboox/xmake-sublime/master/res/commands.png" width="60%" />
+ 
+## Configuration
+
+<img src="https://raw.githubusercontent.com/tboox/xmake-sublime/master/res/configure.gif" width="60%" />
+ 
+## Build and Run
+
+<img src="https://raw.githubusercontent.com/tboox/xmake-sublime/master/res/build_run.gif" width="60%" />
+  
+## Problem
+
+<img src="https://raw.githubusercontent.com/tboox/xmake-sublime/master/res/problem.gif" width="60%" />
