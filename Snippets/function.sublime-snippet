@@ -1,0 +1,8 @@
+<snippet>
+	<description>command</description>
+	<content><![CDATA[function ${1:name}(${2:args}) 
+	$0
+end]]></content>
+	<tabTrigger>function</tabTrigger>
+	<scope>source.xmake</scope>
+</snippet>

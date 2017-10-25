@@ -1,0 +1,8 @@
+<snippet>
+	<description>control flow</description>
+	<content><![CDATA[while ${1:cond} do
+	$0
+end]]></content>
+	<tabTrigger>while</tabTrigger>
+	<scope>source.xmake</scope>
+</snippet>

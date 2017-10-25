@@ -1,0 +1,8 @@
+<snippet>
+	<description>control flow</description>
+	<content><![CDATA[for ${1:item} in ${2:items} do
+	$0
+end]]></content>
+	<tabTrigger>for</tabTrigger>
+	<scope>source.xmake</scope>
+</snippet>

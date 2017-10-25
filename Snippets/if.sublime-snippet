@@ -1,0 +1,8 @@
+<snippet>
+	<description>control flow</description>
+	<content><![CDATA[if ${1:cond} then
+	$0
+end]]></content>
+	<tabTrigger>if</tabTrigger>
+	<scope>source.xmake</scope>
+</snippet>
