@@ -66,7 +66,7 @@ Please see [xmake-github](https://github.com/tboox/xmake) and [website](http://x
  
 ## Configuration
 
-<img src="https://raw.githubusercontent.com/tboox/xmake-sublime/master/res/configure.gif" width="60%" />
+![configuration](https://raw.githubusercontent.com/tboox/xmake-sublime/master/res/configuration.png)
  
 ## Build and Run
 
