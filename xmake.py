@@ -77,7 +77,7 @@ class XmakePlugin(object):
 		window.run_command("show_panel", {"panel": "console", "toggle": False})
 
 	# get the project directory
-	def get_projectdir(self, tips = True):
+	def get_projectdir(self, tips = True, quick_start = False):
 
 		# get window
 		window = sublime.active_window()
@@ -122,6 +122,14 @@ class XmakePlugin(object):
 				projectdir = folder
 				break
 
+		# quick start? attempt to get the first folder
+		if not projectdir and quick_start:
+			for folder in folders:
+				if folder == ".":
+					folder = os.path.basename(os.path.dirname(window.project_file_name()))
+				projectdir = folder
+				break
+
 		# show error tips if not found
 		if not projectdir and tips:
 			self.console_print("", "", "Unable to find xmake.lua in the project folder, you must have a xmake.lua file.")
@@ -159,11 +167,12 @@ class XmakePlugin(object):
 		self.panels["output." + name] = None
 
 	# run command
-	def run_command(self, command, taskname = None):
+	def run_command(self, command, taskname = None, cwd = None):
 
-		# get project directory
-		projectdir = plugin.get_projectdir(False)
-		if projectdir == None:
+		# get current directory
+		if cwd == None:
+			cwd = plugin.get_projectdir(False)
+		if cwd == None:
 			return
 
 		# get window
@@ -179,10 +188,10 @@ class XmakePlugin(object):
 		panel.set_read_only(False)
 
 		# start time
-		startime = time.clock()
+		startime = time.time()
 
 		# run it
-		process = subprocess.Popen(command, stdout = subprocess.PIPE, shell = True, cwd = projectdir, bufsize = 0)
+		process = subprocess.Popen(command, stdout = subprocess.PIPE, shell = True, cwd = cwd, bufsize = 0)
 		if process:
 			process.stdout.flush()
 			for line in iter(process.stdout.readline, b''):
@@ -191,7 +200,7 @@ class XmakePlugin(object):
 			process.communicate()
 
 		# end time
-		endime = time.clock()
+		endime = time.time()
 
 		# show result
 		result = "%sFinished, %0.2f seconds!\n" %(taskname + " " if taskname else "", endime - startime)
@@ -337,6 +346,38 @@ plugin = XmakePlugin()
 # plugin loaded
 def plugin_loaded():
 	plugin.update_status()
+
+# quick start 
+class XmakeQuickStartCommand(sublime_plugin.TextCommand):
+
+	# run command
+	def run(self, edit):
+
+		# run async
+		sublime.set_timeout_async(self.__run_async, 0)
+
+	# async run command
+	def __run_async(self):
+
+		# get the project directory
+		projectdir = plugin.get_projectdir(True, True)
+		if projectdir == None:
+			return
+
+		# clean output panel first
+		plugin.clean_output_panel("xmake")
+        
+		# configure project
+		plugin.run_command(plugin.get_xmake() + " f -y", "Quick Start", projectdir)
+
+		# reload options
+		plugin.load_options()
+
+		# update status
+		plugin.update_status()
+
+		# clear options changed
+		plugin.mark_options_changed(False)
 
 # clean configure 
 class XmakeCleanConfigureCommand(sublime_plugin.TextCommand):
@@ -739,6 +780,12 @@ class XmakeListener(sublime_plugin.EventListener):
 		# update status
 		plugin.update_status()
 
+	# on modified
+	def on_modified_async(self, view):
+
+		# hide tips
+		self.__hide_tips(view)
+
 	# on post text command
 	def on_post_text_command(self, view, command_name, args):
 
@@ -781,26 +828,39 @@ class XmakeListener(sublime_plugin.EventListener):
 				kind = matches[0][4]
 				message = matches[0][5]
 
+		# get the project directory
+		projectdir = plugin.get_projectdir()
+		if projectdir == None:
+			return
+
+		# get absolute file path
+		if not os.path.isabs(file):
+			file = os.path.abspath(os.path.join(projectdir, file))
+
 		# goto the error and warning position
 		if file and line and message and os.path.isfile(file):
-
-			# get the project directory
-			projectdir = plugin.get_projectdir()
-			if projectdir == None:
-				return
-
-			# get absolute file path
-			if not os.path.isabs(file):
-				file = os.path.abspath(os.path.join(projectdir, file))
 
 			# goto the file view
 			window = sublime.active_window()
 			fileview = window.open_file("%s:%s:0"%(file, line), sublime.ENCODED_POSITION)
 			if fileview:
-				# TODO
-				line = int(line)
-				region = fileview.line(fileview.text_point(line - 1 if line > 0 else 0, 0))
-				fileview.add_regions("highlighted_lines", [region], 'error', 'dot', sublime.DRAW_OUTLINED)
-				fileview.show(region)
 				window.focus_view(fileview)
+				sublime.set_timeout_async(lambda: self.__show_tips(fileview, line), 500)
+
+	# show tips
+	def __show_tips(self, view, line):
+
+		# draw region
+		line = int(line)
+		region = view.line(view.text_point(line - 1 if line > 0 else 0, 0))
+		view.add_regions("xmake_errortips", [region], 'error', 'dot', sublime.DRAW_OUTLINED)
+		view.show(region)
+
+	# hide tips
+	def __hide_tips(self, view):
+
+		# remove regions
+		regions = view.get_regions("xmake_errortips")
+		if regions and len(regions) > 0:
+			view.erase_regions("xmake_errortips")
 

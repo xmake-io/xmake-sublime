@@ -28,6 +28,10 @@
         "command": "xmake_clean_configure"
     },
     {
+        "caption": "XMake: Quick Start",
+        "command": "xmake_quick_start"
+    },
+    {
         "caption": "XMake: Set Build Mode",
         "command": "xmake_set_build_mode"
     },
