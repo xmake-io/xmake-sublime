@@ -197,7 +197,9 @@ class XmakePlugin(object):
 		startime = time.time()
 
 		# run it
-		process = subprocess.Popen(command, stdout = subprocess.PIPE, shell = True, cwd = cwd, bufsize = 0)
+		env = os.environ
+		env["COLORTERM"] = "nocolor"
+		process = subprocess.Popen(command, stdout = subprocess.PIPE, shell = True, cwd = cwd, env = env, bufsize = 0)
 		if process:
 			process.stdout.flush()
 			for line in iter(process.stdout.readline, b''):
