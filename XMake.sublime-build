@@ -1,5 +1,5 @@
 {
-	"shell_cmd": "xmake",
+	"shell_cmd": "COLORTERM=nocolor xmake",
 	"working_dir": "$folder",
-    "file_regex": "error: (.*?):([0-9]*):[0-9]*: .*?: (.*)"
+    "file_regex": "error: (.*?):([0-9]*):[0-9]*: .*?: (.*)",
 }

@@ -8,8 +8,7 @@ import time
 # References
 #
 # - http://feliving.github.io/Sublime-Text-3-Documentation/api_reference.html
-#
-#
+# 
 
 # the xmake plugin
 class XmakePlugin(object):
