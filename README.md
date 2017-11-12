@@ -6,6 +6,20 @@
   <h1>xmake-sublime</h1>
 
   <div>
+    <a href="https://github.com/tboox/xmake-sublime/blob/master/LICENSE">
+      <img src="https://img.shields.io/github/license/tboox/xmake-sublime.svg?colorB=f48041&style=flat-square" alt="license" />
+    </a>
+    <a href="https://github.com/tboox/xmake-sublime/releases">
+      <img src="https://img.shields.io/github/release/tboox/xmake-sublime.svg?style=flat-square" alt="Github All Releases" />
+    </a>
+    <a href="https://packagecontrol.io/packages/xmake">
+      <img src="https://img.shields.io/packagecontrol/dt/xmake.svg?style=flat-square" alt="total downloads" />
+    </a>
+    <a href="https://packagecontrol.io/packages/xmake">
+      <img src="https://img.shields.io/packagecontrol/dm/xmake.svg?style=flat-square" alt="monthly downloads" />
+    </a>
+  </div>
+  <div>
     <a href="https://gitter.im/tboox/tboox?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge">
       <img src="https://img.shields.io/gitter/room/tboox/tboox.svg?style=flat-square&colorB=96c312" alt="Gitter" />
     </a>
@@ -17,9 +31,6 @@
     </a>
     <a href="https://jq.qq.com/?_wv=1027&k=5hpwWFv">
       <img src="https://img.shields.io/badge/chat-on%20QQ-ff69b4.svg?style=flat-square" alt="QQ" />
-    </a>
-    <a href="https://github.com/tboox/xmake-sublime/blob/master/LICENSE">
-      <img src="https://img.shields.io/github/license/tboox/xmake-sublime.svg?colorB=f48041&style=flat-square" alt="license" />
     </a>
     <a href="http://xmake.io/pages/donation.html#donate">
       <img src="https://img.shields.io/badge/donate-us-orange.svg?style=flat-square" alt="Donate" />
