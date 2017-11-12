@@ -6,11 +6,8 @@
   <h1>xmake-sublime</h1>
 
   <div>
-    <a href="https://github.com/tboox/xmake-sublime/blob/master/LICENSE">
-      <img src="https://img.shields.io/github/license/tboox/xmake-sublime.svg?colorB=f48041&style=flat-square" alt="license" />
-    </a>
-    <a href="https://github.com/tboox/xmake-sublime/releases">
-      <img src="https://img.shields.io/github/release/tboox/xmake-sublime.svg?style=flat-square" alt="Github All Releases" />
+    <a href="https://github.com/tboox/xmake-sublime/tags">
+      <img src="https://img.shields.io/github/tag/tboox/xmake-sublime.svg?style=flat-square" alt="Github All Releases" />
     </a>
     <a href="https://packagecontrol.io/packages/xmake">
       <img src="https://img.shields.io/packagecontrol/dt/xmake.svg?style=flat-square" alt="total downloads" />
@@ -20,6 +17,9 @@
     </a>
   </div>
   <div>
+    <a href="https://github.com/tboox/xmake-sublime/blob/master/LICENSE">
+      <img src="https://img.shields.io/github/license/tboox/xmake-sublime.svg?colorB=f48041&style=flat-square" alt="license" />
+    </a>
     <a href="https://gitter.im/tboox/tboox?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge">
       <img src="https://img.shields.io/gitter/room/tboox/tboox.svg?style=flat-square&colorB=96c312" alt="Gitter" />
     </a>
