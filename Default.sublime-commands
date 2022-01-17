@@ -32,6 +32,10 @@
         "command": "xmake_quick_start"
     },
     {
+        "caption": "XMake: Genterate Compile Commands",
+        "command": "xmake_compile_commands"
+    },
+    {
         "caption": "XMake: Set Build Mode",
         "command": "xmake_set_build_mode"
     },

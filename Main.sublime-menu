@@ -16,6 +16,7 @@
                     { "command": "xmake_configure", "caption": "Configure"},
                     { "command": "xmake_clean_configure", "caption": "Clean Configure"},
                     { "command": "xmake_quick_start", "caption": "Quick Start"},
+                    { "command": "xmake_compile_commands", "caption": "Genterate Compile Commands"},
                     { "command": "xmake_set_build_mode", "caption": "Set Build Mode"},
                     { "command": "xmake_set_target_plat", "caption": "Set Target Platform"},
                     { "command": "xmake_set_target_arch", "caption": "Set Target Architecture"},
