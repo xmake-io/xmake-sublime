@@ -563,6 +563,34 @@ class XmakeRunCommand(sublime_plugin.TextCommand):
 		# run target
 		plugin.run_command(command, "Run")
 
+# genterate compile_commands.json
+class XmakeCompileCommandsCommand(sublime_plugin.TextCommand):
+
+	# run command
+	def run(self, edit):
+
+		# run async
+		sublime.set_timeout_async(self.__run_async, 0)
+
+	# async run command
+	def __run_async(self):
+
+		# get the project directory
+		projectdir = plugin.get_projectdir()
+		if projectdir == None:
+			return
+
+		# clean output panel first
+		plugin.clean_output_panel("xmake")
+
+		# update config
+		plugin.update_config()
+
+		# make command
+		command = plugin.get_xmake() + " project -k compile_commands"   
+  
+		plugin.run_command(command, "CompileCommands")
+
 # clean files
 class XmakeCleanCommand(sublime_plugin.TextCommand):
 
