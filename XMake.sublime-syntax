@@ -1,0 +1,869 @@
+%YAML 1.2
+---
+name: XMake
+scope: source.lua
+version: 2
+
+file_extensions:
+  - xmake.lua
+
+first_line_match: |-
+  (?xi:
+    ^ \#! .* \blua\b                        # shebang
+  | ^ \s* -- .*? -\*- .*? \blua\b .*? -\*-  # editorconfig
+  )
+
+variables:
+  reserved_word: |-
+    (?x:(?:
+      and|break|do|elseif|else|end|false|for|function|goto|if|in|
+      local|nil|not|or|repeat|return|then|true|until|while
+    ){{identifier_break}})
+  reserved_word_statement: |- # excludes 'not', 'true', 'nil', 'false', 'function'
+    (?x:(?:
+      and|break|do|elseif|else|end|for|goto|if|in|
+      local|or|repeat|return|then|until|while
+    ){{identifier_break}})
+  metamethod: |- # http://lua-users.org/wiki/MetatableEvents
+    (?x:__(?:
+      # special
+      index|newindex|call|tostring|len|i?pairs|gc
+      # math operators
+      |unm|add|sub|mul|i?div|mod|pow|concat
+      # bitwise operators
+      |band|bor|bxor|bnot|shl|shr
+      # comparison
+      |eq|lt|le
+    ){{identifier_break}})
+  # __metatable and __mode don't use functions
+  metaproperty: (?:__(?:metatable|mode){{identifier_break}})
+
+  identifier_start: '[A-Za-z_]'
+  identifier_char: '[A-Za-z0-9_]'
+  identifier_break: (?!{{identifier_char}})
+  identifier_raw: (?:{{identifier_start}}{{identifier_char}}*)
+  identifier: (?:(?!{{reserved_word}}){{identifier_raw}})
+
+  trailing_expression_char: '[,\]})]'
+
+  function_args_begin: (?:\(|"|'|\[=*\[|\{)
+  function_call_ahead: (?=\s*{{function_args_begin}})
+  function_assignment_ahead: (?=\s*=\s*function{{identifier_break}})
+
+  dec_exponent: (?:[Ee][-+]?\d*)
+  hex_exponent: (?:[Pp][-+]?\d*)
+
+contexts:
+  main:
+    - meta_include_prototype: false
+    - match: ''
+      push: [statements, shebang]
+
+  else-pop:
+    - match: (?=\S)
+      pop: 1
+
+  immediately-pop:
+    - match: ''
+      pop: 1
+
+  prototype:
+    - include: comments
+
+  comments:
+    - include: block-comments
+    - include: line-comments
+
+  block-comments:
+    - match: --\[(=*)\[
+      scope: punctuation.definition.comment.begin.xmake
+      push: block-comment-body
+
+  block-comment-body:
+    - meta_include_prototype: false
+    - meta_scope: comment.block.xmake
+    - match: \]\1\]
+      scope: punctuation.definition.comment.end.xmake
+      pop: 1
+
+  line-comments:
+    - match: --
+      scope: punctuation.definition.comment.xmake
+      push: line-comment-body
+
+  line-comment-body:
+    - meta_include_prototype: false
+    - meta_scope: comment.line.xmake
+    - match: \n
+      pop: 1
+
+  shebang:
+    - meta_include_prototype: false
+    - match: ^\#!
+      scope: punctuation.definition.comment.xmake
+      set: shebang-body
+    - match: ^|(?=\S)
+      pop: 1
+
+  shebang-body:
+    - meta_include_prototype: false
+    - meta_scope: comment.line.shebang.xmake
+    - match: \blua\b
+      scope: constant.language.shebang.xmake
+    - match: \n
+      pop: 1
+
+  statements:
+    - match: ;
+      scope: punctuation.terminator.statement.xmake
+
+    - match: function{{identifier_break}}
+      scope: keyword.declaration.function.xmake
+      push:
+        - function-meta
+        - block-contents
+        - function-parameter-list
+        - function-name
+
+    - include: control-statements
+
+    - match: break{{identifier_break}}
+      scope: keyword.control.break.xmake
+
+    - match: return{{identifier_break}}
+      scope: keyword.control.return.xmake
+      push: expression-list
+
+    - match: local{{identifier_break}}
+      scope: storage.modifier.xmake
+      push: expression-list
+
+    - match: end{{identifier_break}}
+      scope: invalid.illegal.unexpected-end.xmake
+
+    - match: (?=\S)
+      push: expression
+
+  block-contents:
+    - meta_scope: meta.block.xmake
+    - include: end
+    - include: statements
+
+  end:
+    - match: end{{identifier_break}}
+      scope: keyword.control.end.xmake
+      pop: 1
+
+  function-parameter-list:
+    - match: \(
+      scope: punctuation.section.group.begin.xmake
+      set:
+        - meta_scope: meta.group.xmake
+        - match: \)
+          scope: punctuation.section.group.end.xmake
+          pop: 1
+        - match: ','
+          scope: punctuation.separator.comma.xmake
+        - include: reserved-word-pop
+        - match: '{{identifier}}'
+          scope: variable.parameter.function.xmake
+        - match: \.\.\.
+          scope: constant.language.xmake
+    - include: else-pop
+
+  function-name:
+    - match: (?=\S)
+      set: [ function-name-end, function-name-begin ]
+
+  function-name-end:
+    - meta_scope: meta.name.function
+    - match: '[.:]'
+      scope: punctuation.accessor.xmake
+      push: function-name-property
+    - include: else-pop
+
+  function-name-begin:
+    - match: '{{identifier}}(?=\s*[.:])'
+      scope: variable.other.xmake
+      pop: 1
+    - match: '{{identifier}}'
+      scope: entity.name.function.xmake
+      pop: 1
+    - include: else-pop
+
+  function-name-property:
+    - match: '{{identifier}}(?=\s*[.:])'
+      scope: meta.property.xmake
+      pop: 1
+    - match: '{{metamethod}}'
+      scope: meta.property.xmake entity.name.function.xmake support.function.metamethod.xmake
+      pop: 1
+    - match: '{{identifier}}'
+      scope: meta.property.xmake entity.name.function.xmake
+      pop: 1
+    - include: else-pop
+
+  control-statements:
+    - match: do{{identifier_break}}
+      scope: keyword.control.xmake
+      push: block-contents
+
+    - match: if{{identifier_break}}
+      scope: keyword.control.conditional.xmake
+      push:
+        - if-then
+        - expression
+
+    - match: while{{identifier_break}}
+      scope: keyword.control.loop.xmake
+      push:
+        - - match: do{{identifier_break}}
+            scope: keyword.control.xmake
+            push: block-contents
+          - include: else-pop
+        - expression
+
+    - match: repeat{{identifier_break}}
+      scope: keyword.control.loop.xmake
+      push:
+        - - match: until{{identifier_break}}
+            scope: keyword.control.loop.xmake
+            set: expression
+        - - meta_scope: meta.block.xmake
+          - match: (?=until{{identifier_break}})
+            pop: 1
+          - include: statements
+
+    - match: for{{identifier_break}}
+      scope: keyword.control.loop.xmake
+      push:
+        - - match: do{{identifier_break}}
+            scope: keyword.control.xmake
+            push: block-contents
+          - include: else-pop
+
+        - - match: (?==)
+            set: expression-list-end
+
+          - match: in{{identifier_break}}
+            scope: keyword.control.loop.xmake
+            set: expression-list
+
+          - include: else-pop
+
+        - expression-list
+
+    - match: '::'
+      scope: punctuation.definition.label.begin.xmake
+      push:
+        - match: '{{identifier}}'
+          scope: entity.name.label.xmake
+          set:
+            - match: '::'
+              scope: punctuation.definition.label.end.xmake
+              pop: 1
+            - include: else-pop
+        - include: else-pop
+
+    - match: goto{{identifier_break}}
+      scope: keyword.control.goto.xmake
+      push:
+        - match: '{{identifier}}'
+          scope: variable.label.xmake
+          pop: 1
+        - include: else-pop
+
+  if-then:
+    - match: then{{identifier_break}}
+      scope: keyword.control.conditional.xmake
+      set: if-block
+    - include: else-pop
+
+  if-block:
+    - meta_scope: meta.block.xmake
+    - include: end
+    - match: elseif{{identifier_break}}
+      scope: keyword.control.conditional.xmake
+      set:
+        - if-then
+        - expression
+    - match: else{{identifier_break}}
+      scope: keyword.control.conditional.xmake
+      set: if-block
+    - include: statements
+
+  expression:
+    - match: ''
+      set:
+        - expression-end
+        - expression-begin
+
+  expression-list:
+    - match: ''
+      set:
+        - expression-list-end
+        - expression-begin
+
+  expression-end:
+    - match: (?=;)
+      pop: 1
+
+    - match: (?=::)
+      pop: 1
+
+    - match: (?={{function_args_begin}})
+      push:
+        - function-arguments-meta
+        - function-arguments
+
+    - include: infix-operator
+    - include: accessor
+
+    # Safety match for unexpected characters so we don't confuse the syntax by exiting contexts too early
+    - match: '[^{{trailing_expression_char}}{{identifier_char}}\s]'
+      scope: invalid.illegal.unexpected-character.xmake
+
+    - include: else-pop
+
+  expression-list-end:
+    - match: ','
+      scope: punctuation.separator.comma.xmake
+      push: expression-begin
+    - match: (?=<(?![<=]))
+      branch_point: left-angle
+      branch:
+        - left-angle-is-variable-modifier
+        - left-angle-is-less-than
+    - include: expression-end
+
+  expression-begin:
+    - match: (?=;)
+      pop: 1
+
+    - include: prefix-operator
+    - include: builtin
+    - include: support
+    - include: variable
+    - include: number
+    - include: string
+    - include: parenthesized-expression
+    - include: table-constructor
+    - include: function-literal
+
+    - include: else-pop
+
+  left-angle-is-less-than:
+    - match: '<'
+      scope: keyword.operator.comparison.xmake
+      pop: 1
+
+  left-angle-is-variable-modifier:
+    - match: '<'
+      scope: punctuation.definition.modifier.begin.xmake
+      set: variable-modifier-body
+
+  variable-modifier-body:
+    - meta_scope: meta.modifier.xmake
+    - match: '>'
+      scope: punctuation.definition.modifier.end.xmake
+      pop: 1
+    - match: (?:const|close){{identifier_break}}
+      scope: storage.modifier.xmake
+    - match: (?=\S)
+      fail: left-angle
+
+  infix-operator:
+    - match: (?:[=<>~]=)
+      scope: keyword.operator.comparison.xmake
+      push: expression-begin
+    - match: (?://|[-+*/%^])
+      scope: keyword.operator.arithmetic.xmake
+      push: expression-begin
+    - match: (?:>>|<<|[&|~])
+      scope: keyword.operator.bitwise.xmake
+      push: expression-begin
+    - match: (?:[<>])
+      scope: keyword.operator.comparison.xmake
+      push: expression-begin
+    - match: \.\.
+      scope: keyword.operator.concatenation.xmake
+      push: expression-begin
+    - match: =
+      scope: keyword.operator.assignment.xmake
+      push: expression-begin
+    - match: (?:and|or){{identifier_break}}
+      scope: keyword.operator.logical.xmake
+      push: expression-begin
+
+  accessor:
+    - match: '[.:]'
+      scope: punctuation.accessor.xmake
+      push: property
+
+    - match: \[
+      scope: punctuation.section.brackets.begin.xmake
+      push:
+        - meta_scope: meta.brackets.xmake
+        - match: \]
+          scope: punctuation.section.brackets.end.xmake
+          pop: 1
+        - include: reserved-word-expression-pop
+        - match: (?=\S)
+          push: expression
+
+  property:
+    - match: '{{metamethod}}{{function_assignment_ahead}}'
+      scope: meta.property.xmake entity.name.function.xmake support.function.metamethod.xmake
+      pop: 1
+    - match: '{{identifier}}{{function_assignment_ahead}}'
+      scope: meta.property.xmake entity.name.function.xmake
+      pop: 1
+    - match: '{{identifier}}{{function_call_ahead}}'
+      scope: meta.property.xmake meta.function-call.xmake variable.function.xmake
+      pop: 1
+    - match: '{{metaproperty}}'
+      scope: meta.property.xmake support.other.metaproperty.xmake
+      pop: 1
+    - match: '{{identifier}}'
+      scope: meta.property.xmake
+      pop: 1
+    - include: reserved-word-pop
+    - include: else-pop
+
+  function-arguments-meta:
+    - meta_scope: meta.function-call.arguments.xmake
+    - include: immediately-pop
+
+  function-arguments:
+    - include: string
+    - include: table-constructor
+
+    - match: \(
+      scope: punctuation.section.group.begin.xmake
+      set:
+        - meta_scope: meta.group.xmake
+        - match: \)
+          scope: punctuation.section.group.end.xmake
+          pop: 1
+        - include: reserved-word-expression-pop
+        - match: (?=\S)
+          push: expression-list
+
+  prefix-operator:
+    - match: '#'
+      scope: keyword.operator.length.xmake
+    - match: \-
+      scope: keyword.operator.arithmetic.xmake
+    - match: \~
+      scope: keyword.operator.bitwise.xmake
+    - match: not{{identifier_break}}
+      scope: keyword.operator.logical.xmake
+
+  reserved-word-pop:
+    - match: '{{reserved_word}}'
+      scope: invalid.unexpected-keyword.xmake
+      pop: 1
+
+  reserved-word-expression-pop:
+    - match: '{{reserved_word_statement}}'
+      scope: invalid.unexpected-keyword.xmake
+      pop: 1
+
+  builtin:
+    - match: (?:true|false){{identifier_break}}
+      scope: constant.language.boolean.xmake
+      pop: 1
+    - match: nil{{identifier_break}}
+      scope: constant.language.null.xmake
+      pop: 1
+    - match: \.\.\.
+      scope: constant.language.xmake
+      pop: 1
+    - match: self{{identifier_break}}
+      scope: variable.language.this.xmake
+      pop: 1
+
+  support:
+    - match: |-
+        (?x:_G|_VERSION){{identifier_break}}
+      scope: support.constant.builtin.xmake
+      pop: 1
+
+    - match: |-
+        (?x:
+          assert|collectgarbage|dofile|error|getmetatable|ipairs|load|loadfile
+          |next|pairs|pcall|print|rawequal|rawget|rawlen|rawset|select
+          |setmetatable|tonumber|tostring|type|xpcall
+          |require|getfenv|module|setfenv|unpack
+        ){{function_call_ahead}}
+      scope: meta.function-call.xmake support.function.builtin.xmake
+      pop: 1
+
+    - include: builtin-modules
+
+  variable:
+    - match: '{{identifier}}{{function_assignment_ahead}}'
+      scope: entity.name.function.xmake
+      pop: 1
+
+    - match: '{{identifier}}{{function_call_ahead}}'
+      scope: meta.function-call.xmake variable.function.xmake
+      pop: 1
+
+    - match: '{{identifier}}'
+      scope: variable.other.xmake
+      pop: 1
+
+  number:
+    - match: (0[Xx])(\h*(?:(\.)\h*{{hex_exponent}}?|{{hex_exponent}}))
+      scope: meta.number.float.hexadecimal.xmake
+      captures:
+        1: constant.numeric.base.xmake
+        2: constant.numeric.value.xmake
+        3: punctuation.separator.decimal.xmake
+      pop: 1
+
+    - match: (0[Xx])(\h+)
+      scope: meta.number.integer.hexadecimal.xmake
+      captures:
+        1: constant.numeric.base.xmake
+        2: constant.numeric.value.xmake
+      pop: 1
+
+    - match: \d+(?:(\.)\d*{{dec_exponent}}?|{{dec_exponent}})|(\.)\d+{{dec_exponent}}?
+      scope: meta.number.float.decimal.xmake constant.numeric.value.xmake
+      captures:
+        1: punctuation.separator.decimal.xmake
+        2: punctuation.separator.decimal.xmake
+      pop: 1
+
+    - match: \d+
+      scope: meta.number.integer.decimal.xmake constant.numeric.value.xmake
+      pop: 1
+
+  string:
+    - include: single-quoted-string
+    - include: double-quoted-string
+    - include: multiline-string
+
+  single-quoted-string:
+    - match: \'
+      scope: punctuation.definition.string.begin.xmake
+      set: single-quoted-string-body
+
+  single-quoted-string-body:
+    - meta_include_prototype: false
+    - meta_scope: meta.string.xmake string.quoted.single.xmake
+    - include: string-content
+    - match: \'
+      scope: punctuation.definition.string.end.xmake
+      pop: 1
+
+  double-quoted-string:
+    - match: \"
+      scope: punctuation.definition.string.begin.xmake
+      set: double-quoted-string-body
+
+  double-quoted-string-body:
+    - meta_include_prototype: false
+    - meta_scope: meta.string.xmake string.quoted.double.xmake
+    - include: string-content
+    - match: \"
+      scope: punctuation.definition.string.end.xmake
+      pop: 1
+
+  multiline-string:
+    - match: \[(=*)\[
+      scope: punctuation.definition.string.begin.xmake
+      set: multiline-string-body
+
+  multiline-string-body:
+    - meta_scope: meta.string.xmake string.quoted.multiline.xmake
+    - meta_include_prototype: false
+    - match: \]\1\]
+      scope: punctuation.definition.string.end.xmake
+      pop: 1
+
+  string-content:
+    - match: \\[abfnrtv\\'"\[\]\n]
+      scope: constant.character.escape.xmake
+
+    - match: \\x\h\h
+      scope: constant.character.escape.hexadecimal.xmake
+
+    - match: \\\d{1,3}
+      scope: constant.character.escape.decimal.xmake
+
+    - match: \\u\{\h+\}
+      scope: constant.character.escape.unicode.xmake
+
+    - match: \\z
+      push:
+        - meta_scope: constant.character.escape.whitespace.xmake
+        - include: else-pop
+
+    - match: \n
+      scope: invalid.illegal.unclosed-string.xmake
+      pop: 1
+    - match: \\.
+      scope: invalid.illegal.invalid-escape.xmake
+
+  parenthesized-expression:
+    - match: \(
+      scope: punctuation.section.group.begin.xmake
+      set:
+        - meta_scope: meta.group.xmake
+        - match: \)
+          scope: punctuation.section.group.end.xmake
+          pop: 1
+        - include: reserved-word-expression-pop
+        - match: (?=\S)
+          push: expression
+
+  table-constructor:
+    - match: \{
+      scope: punctuation.section.block.begin.xmake
+      set:
+        - meta_scope: meta.mapping.xmake
+        - match: \}
+          scope: punctuation.section.block.end.xmake
+          pop: 1
+
+        - match: '[,;]'
+          scope: punctuation.separator.field.xmake
+
+        - match: \[(?!=*\[)
+          scope: punctuation.section.brackets.begin.xmake
+          push:
+            - clear_scopes: 1
+            - meta_scope: meta.mapping.key.xmake meta.brackets.xmake
+            - match: \]
+              scope: punctuation.section.brackets.end.xmake
+              pop: 1
+            - match: (?=\S)
+              push: expression
+
+        - match: (?={{identifier}}\s*=(?!=))
+          push:
+            - clear_scopes: 1
+            - meta_scope: meta.mapping.key.xmake
+            - match: (?:({{metamethod}})|{{identifier}})(?=\s*=\s*function\b)
+              scope: entity.name.function.xmake
+              captures:
+                1: support.function.metamethod.xmake
+              pop: 1
+            - match: '{{metamethod}}'
+              scope: entity.name.function.xmake support.function.metamethod.xmake
+              pop: 1
+            - match: '{{metaproperty}}'
+              scope: string.unquoted.key.xmake support.other.metaproperty.xmake
+              pop: 1
+            - match: '{{identifier}}'
+              scope: string.unquoted.key.xmake
+              pop: 1
+
+        - match: =(?!=)
+          scope: meta.mapping.xmake punctuation.separator.key-value.xmake
+          push:
+            - - clear_scopes: 1
+              - meta_content_scope: meta.mapping.value.xmake
+              - include: immediately-pop
+            - expression
+        - match: (?=\S)
+          push: expression
+
+  function-literal:
+    - match: function{{identifier_break}}
+      scope: keyword.declaration.function.xmake
+      set:
+        - function-meta
+        - block-contents
+        - function-parameter-list
+        - function-name
+
+  function-meta:
+    - meta_scope: meta.function.xmake
+    - include: immediately-pop
+
+  builtin-modules:
+    - match: coroutine{{identifier_break}}
+      scope: support.constant.builtin.xmake
+      set:
+        - match: \.
+          scope: punctuation.accessor.xmake
+          set:
+            - match: |-
+                (?x:
+                  create|isyieldable|resume|running|status|wrap|yield|close
+                ){{identifier_break}}
+              scope: meta.property.xmake support.function.builtin.xmake
+              pop: 1
+            - include: property
+        - include: else-pop
+
+    - match: package{{identifier_break}}
+      scope: support.constant.builtin.xmake
+      set:
+        - match: \.
+          scope: punctuation.accessor.xmake
+          set:
+            - match: |-
+                (?x:
+                  config|cpath|loaded|path|preload|searchers|loaders
+                ){{identifier_break}}
+              scope: meta.property.xmake support.constant.builtin.xmake
+              pop: 1
+            - match: |-
+                (?x:
+                  loadlib|searchpath|seeall
+                ){{identifier_break}}
+              scope: meta.property.xmake support.function.builtin.xmake
+              pop: 1
+            - include: property
+        - include: else-pop
+
+    - match: string{{identifier_break}}
+      scope: support.constant.builtin.xmake
+      set:
+        - match: \.
+          scope: punctuation.accessor.xmake
+          set:
+            - match: |-
+                (?x:
+                  byte|char|dump|find|format|gmatch|gsub|len|lower|match|pack
+                  |packsize|rep|reverse|sub|unpack|upper
+                ){{identifier_break}}
+              scope: meta.property.xmake support.function.builtin.xmake
+              pop: 1
+            - include: property
+        - include: else-pop
+
+    - match: utf8{{identifier_break}}
+      scope: support.constant.builtin.xmake
+      set:
+        - match: \.
+          scope: punctuation.accessor.xmake
+          set:
+            - match: |-
+                (?x:
+                  charpattern
+                ){{identifier_break}}
+              scope: meta.property.xmake support.constant.builtin.xmake
+              pop: 1
+            - match: |-
+                (?x:
+                  char|codes|codepoint|len|offset
+                ){{identifier_break}}
+              scope: meta.property.xmake support.function.builtin.xmake
+              pop: 1
+            - include: property
+        - include: else-pop
+
+    - match: table{{identifier_break}}
+      scope: support.constant.builtin.xmake
+      set:
+        - match: \.
+          scope: punctuation.accessor.xmake
+          set:
+            - match: |-
+                (?x:
+                  concat|insert|move|pack|remove|sort|unpack|maxn
+                ){{identifier_break}}
+              scope: meta.property.xmake support.function.builtin.xmake
+              pop: 1
+            - include: property
+        - include: else-pop
+
+    - match: math{{identifier_break}}
+      scope: support.constant.builtin.xmake
+      set:
+        - match: \.
+          scope: punctuation.accessor.xmake
+          set:
+            - match: |-
+                (?x:
+                  huge|maxinteger|mininteger|pi
+                ){{identifier_break}}
+              scope: meta.property.xmake support.constant.builtin.xmake
+              pop: 1
+            - match: |-
+                (?x:
+                  abs|acos|asin|atan|ceil|cos|deg|exp|floor|fmod|log|max|min
+                  |modf|rad|random|randomseed|sin|sqrt|tan|tointeger|type|ult
+                  |atan2|cosh|frexp|ldexp|log10|pow|sinh|tanh
+                ){{identifier_break}}
+              scope: meta.property.xmake support.function.builtin.xmake
+              pop: 1
+            - include: property
+        - include: else-pop
+
+    - match: io{{identifier_break}}
+      scope: support.constant.builtin.xmake
+      set:
+        - match: \.
+          scope: punctuation.accessor.xmake
+          set:
+            - match: |-
+                (?x:
+                  stderr|stdin|stdout
+                ){{identifier_break}}
+              scope: meta.property.xmake support.constant.builtin.xmake
+              pop: 1
+            - match: |-
+                (?x:
+                  close|flush|input|lines|open|output|popen|read|tmpfile|type|write
+                ){{identifier_break}}
+              scope: meta.property.xmake support.function.builtin.xmake
+              pop: 1
+            - include: property
+        - include: else-pop
+
+    - match: os{{identifier_break}}
+      scope: support.constant.builtin.xmake
+      set:
+        - match: \.
+          scope: punctuation.accessor.xmake
+          set:
+            - match: |-
+                (?x:
+                  clock|date|difftime|execute|exit|getenv|remove|rename
+                  |setlocale|time|tmpname
+                ){{identifier_break}}
+              scope: meta.property.xmake support.function.builtin.xmake
+              pop: 1
+            - include: property
+        - include: else-pop
+
+    - match: debug{{identifier_break}}
+      scope: support.constant.builtin.xmake
+      set:
+        - match: \.
+          scope: punctuation.accessor.xmake
+          set:
+            - match: |-
+                (?x:
+                  debug|gethook|getinfo|getlocal|getmetatable|getregistry
+                  |getupvalue|getuservalue|sethook|setlocal|setmetatable
+                  |setupvalue|setuservalue|traceback|upvalueid|upvaluejoin
+                  |getfenv|setfenv
+                ){{identifier_break}}
+              scope: meta.property.xmake support.function.builtin.xmake
+              pop: 1
+            - include: property
+        - include: else-pop
+
+    - match: bit32{{identifier_break}}
+      scope: support.constant.builtin.xmake
+      set:
+        - match: \.
+          scope: punctuation.accessor.xmake
+          set:
+            - match: |-
+                (?x:
+                  arshift|band|bnot|bor|btest|bxor|extract|lrotate|lshift
+                  |replace|rrotate|rshift
+                ){{identifier_break}}
+              scope: meta.property.xmake support.function.builtin.xmake
+              pop: 1
+            - include: property
+        - include: else-pop
