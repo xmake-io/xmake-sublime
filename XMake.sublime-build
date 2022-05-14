@@ -1,7 +1,17 @@
 {
-	"shell_cmd": "xmake",
+	"cmd": ["xmake", "-a"],
 	"working_dir": "$folder",
     "file_regex": "error: (.*?):([0-9]*):[0-9]*: .*?: (.*)",
     "windows": {"file_regex": "(.*?)\\(([0-9]*)\\): .*?: (.*)"},
-    "env": {"COLORTERM": "nocolor"}
+    "env": {"COLORTERM": "nocolor"},
+    "variants": [
+        {
+            "name" : "Rebuild",
+            "cmd": ["xmake", "-r"]
+        },
+        {
+            "name" : "Config",
+            "cmd": ["xmake", "f"]
+        }
+    ]
 }
