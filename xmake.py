@@ -101,7 +101,7 @@ class XmakePlugin(object):
 			if tips:
 				self.console_print("", "", "Unable to initialize settings, you must have a .sublime-project file.")
 				self.console_print("", "", "Please use 'Project -> Save Project As...' first.")
-				self.console_show(window)
+				self.console_show()
 			return None
 
 		# get the first folder path with xmake.lua
@@ -138,7 +138,7 @@ class XmakePlugin(object):
 		# show error tips if not found
 		if not projectdir and tips:
 			self.console_print("", "", "Unable to find xmake.lua in the project folder, you must have a xmake.lua file.")
-			self.console_show(window)
+			self.console_show()
 
 		# ok?
 		return projectdir
