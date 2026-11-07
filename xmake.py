@@ -198,7 +198,7 @@ class XmakePlugin(object):
 		# run it
 		env = os.environ
 		env["COLORTERM"] = "nocolor"
-		process = subprocess.Popen(command, stdout = subprocess.PIPE, shell = True, cwd = cwd, env = env, bufsize = 0)
+		process = subprocess.Popen(command, stdout = subprocess.PIPE, stderr = subprocess.STDOUT, shell = True, cwd = cwd, env = env, bufsize = 0)
 		if process:
 			process.stdout.flush()
 			for line in iter(process.stdout.readline, b''):
@@ -210,7 +210,10 @@ class XmakePlugin(object):
 		endime = time.time()
 
 		# show result
-		result = "%sFinished, %0.2f seconds!\n" %(taskname + " " if taskname else "", endime - startime)
+		if process and process.returncode:
+			result = "%sFailed (exit code %d), %0.2f seconds!\n" %(taskname + " " if taskname else "", process.returncode, endime - startime)
+		else:
+			result = "%sFinished, %0.2f seconds!\n" %(taskname + " " if taskname else "", endime - startime)
 		panel.run_command('append', {'characters': result, "force": True, "scroll_to_end": True})
 
 		# stop to output
